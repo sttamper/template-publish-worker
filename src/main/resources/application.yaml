@@ -1,3 +1,19 @@
 spring:
   application:
     name: template-publish-worker
+  datasource:
+    url: jdbc:postgresql://localhost:5432/engagement-db
+    username: admin
+    password: admin
+  flyway:
+    enabled: true
+    schemas: engagement-sch
+    default-schema: engagement-sch
+  batch:
+    jdbc:
+      initialize-schema: always
+  kafka:
+    bootstrap-servers: localhost:9093
+    consumer:
+      group-id: template-publish-worker
+      auto-offset-reset: earliest
