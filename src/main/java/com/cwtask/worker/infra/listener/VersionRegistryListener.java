@@ -1,4 +1,4 @@
-package com.cwtask.worker.listener;
+package com.cwtask.worker.infra.listener;
 
 import java.util.UUID;
 
@@ -11,6 +11,7 @@ import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,8 +28,11 @@ public class VersionRegistryListener {
     }
 
     @KafkaListener(topics = "version-registry-topic")
-    public void onMessage(CurrentVersionChanged event) throws Exception {
+    public void onMessage(CurrentVersionChanged event, Acknowledgment acknowledgment) throws Exception {
         log.info("Received CurrentVersionChanged from version-registry-topic: {}", event);
+
+        // At-most-once: commit before processing so a failed job is never redelivered
+        acknowledgment.acknowledge();
 
         // A unique runId makes every event start a new job instance instead of matching a completed one
         JobParameters params = new JobParametersBuilder()

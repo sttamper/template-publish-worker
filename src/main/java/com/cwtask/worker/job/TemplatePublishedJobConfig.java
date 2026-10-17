@@ -2,6 +2,7 @@ package com.cwtask.worker.job;
 
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,11 +20,12 @@ public class TemplatePublishedJobConfig {
     public Job templatePublishedJob(JobRepository jobRepository,
                                     @Qualifier("conciliateEngagementIdsStepBean")
                                     Step conciliateEngagementIdsStep,
-                                    @Qualifier("publishTemplateUpdateAvailableStepBean")
-                                    Step publishTemplateUpdateAvailableStep) {
+                                    @Qualifier("engagementUpdatesFlowBean")
+                                    Flow engagementUpdatesFlow) {
         return new JobBuilder(JOB_NAME, jobRepository)
-                .start(conciliateEngagementIdsStep)
-                .next(publishTemplateUpdateAvailableStep)
+                .flow(conciliateEngagementIdsStep)
+                .next(engagementUpdatesFlow)
+                .end()
                 .build();
     }
 }

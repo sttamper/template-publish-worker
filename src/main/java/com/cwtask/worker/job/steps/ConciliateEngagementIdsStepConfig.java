@@ -1,6 +1,6 @@
 package com.cwtask.worker.job.steps;
 
-import com.cwtask.worker.infra.client.EngagementIndexApiClient;
+import com.cwtask.worker.infra.web.client.EngagementIndexApiClient;
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.repository.JobRepository;

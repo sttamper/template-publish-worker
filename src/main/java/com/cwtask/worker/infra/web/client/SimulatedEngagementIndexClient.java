@@ -1,4 +1,4 @@
-package com.cwtask.worker.infra.client;
+package com.cwtask.worker.infra.web.client;
 
 import java.util.List;
 import java.util.Set;

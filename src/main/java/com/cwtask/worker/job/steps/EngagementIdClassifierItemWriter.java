@@ -2,7 +2,7 @@ package com.cwtask.worker.job.steps;
 
 import java.util.ArrayList;
 
-import com.cwtask.worker.infra.client.EngagementIndexApiClient;
+import com.cwtask.worker.infra.web.client.EngagementIndexApiClient;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.annotation.AfterStep;
 import org.springframework.batch.core.step.StepExecution;

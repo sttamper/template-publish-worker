@@ -1,76 +1,66 @@
-# Getting Started
+# template-publish-worker
 
-### Reference Documentation
+template-publish-worker reconciles which engagements must be opened by engagement-mgmt-system, 
+so this can emit the notification via kafka event for the engagement-index-api to evaluate 
+whether a template update is pending. For the ones that do not need to be opened, the worker 
+sends directly the notification via the same kafka topic.
 
-For further reference, please consider the following sections:
+It is one of the regional services described in
+[`docs/home-task-design-document.pdf`](docs/home-task-design-document.pdf).
 
-* [Official Gradle documentation](https://docs.gradle.org)
-* [Spring Boot Gradle Plugin Reference Guide](https://docs.spring.io/spring-boot/4.1.1/gradle-plugin)
-* [Create an OCI image](https://docs.spring.io/spring-boot/4.1.1/gradle-plugin/packaging-oci-image.html)
-* [Spring Batch](https://docs.spring.io/spring-boot/4.1.1/how-to/batch.html)
-* [Spring Batch JDBC](https://docs.spring.io/spring-boot/4.1.1/how-to/batch.html)
+## How it works
 
-### Guides
+The worker consumes `CurrentVersionChanged` events from `version-registry-topic` and launches the
+`templatePublishedJob` Spring Batch job for each one:
 
-The following guides illustrate how to use some features concretely:
-
-* [Creating a Batch Service](https://spring.io/guides/gs/batch-processing/)
-
-### Additional Links
-
-These additional references should also help you:
-
-* [Gradle Build Scans – insights for your project's build](https://scans.gradle.com#gradle)
-
-### Producing a test message to `version-registry-topic`
-
-Use the `kafka-console-producer` bundled in the Kafka container to check that `VersionRegistryListener` consumes `CurrentVersionChanged` events.
-
-1. Start the local stack (Postgres, ZooKeeper, Kafka) from the project root:
-
-   ```sh
-   podman compose up -d
-   ```
-
-2. Check that the containers are up:
-
-   ```sh
-   podman compose ps
-   ```
-
-3. Start the application (from the IDE, or with `./gradlew bootRun`) and wait for the log line
-   `partitions assigned: [version-registry-topic-0]`.
-
-4. Produce a `CurrentVersionChanged` message:
-
-   ```sh
-   podman exec kafka75-1 bash -c 'echo "{\"templateId\":\"tpl-123\",\"version\":\"7\"}" | kafka-console-producer --bootstrap-server localhost:9092 --topic version-registry-topic'
-   ```
-
-   Or open an interactive producer, type one JSON message per line, and press `Ctrl+C` to quit:
-
-   ```sh
-   podman exec -it kafka75-1 kafka-console-producer --bootstrap-server localhost:9092 --topic version-registry-topic
-   ```
-
-   ```json
-   {"templateId":"tpl-123","version":"7"}
-   ```
-
-5. The application log should show:
-
-   ```
-   Received CurrentVersionChanged from version-registry-topic: CurrentVersionChanged(templateId=tpl-123, version=7)
-   ```
-
-Optionally, read back everything on the topic to confirm the message was written (`Ctrl+C` to quit):
-
-```sh
-podman exec -it kafka75-1 kafka-console-consumer --bootstrap-server localhost:9092 --topic version-registry-topic --from-beginning
+```
+               CurrentVersionChanged (version-registry-topic)
+                                      │
+                                      ▼
+                         conciliateEngagementIdsStep
+                                      │
+                 ┌────────────────────┴────────────────────┐
+                 ▼                                         ▼
+publishTemplateUpdateAvailableStep                openEngagementStep
+     known IDs, 20 in parallel                unknown IDs, 50 in parallel
+                 │                                         │
+         ┌───────┼───────┐                         ┌───────┼───────┐
+         ▼       ▼       ▼                         ▼       ▼       ▼
+       event   event   event ...                 REST    REST    REST  ...
+         │       │       │                         │       │       │
+         └───────┼───────┘                         └───────┼───────┘
+                 ▼                                         ▼
+     engagement-updates-topic                   engagement-mgmt-system
+     (TemplateUpdateAvailable)                     (open engagement)
 ```
 
-Notes:
+Note that once conciliation completes, both steps run in parallel. Inside each step, the events and the REST
+calls are processed concurrently with `CompletableFuture`s on bounded thread pools (20 for publishing, 50 for
+opening), which speeds up the run considerably compared with handling one engagement at a time.
 
-* Inside the container the broker is `localhost:9092`; tools running on your machine use `localhost:9093`.
-* Messages must be JSON with `templateId` and `version` fields.
+## Implementation tradeoffs
 
+* **Job runs on the Kafka listener thread.** This is simple and handles one event at a time per partition. But
+  a run lasts longer than Kafka's default `max.poll.interval.ms` (5 minutes), so the consumer is evicted and the
+  group rebalances during long runs. Launching the job asynchronously, or raising the timeout, would fix this.
+* **Conciliation results live in the job execution context.** The steps share state without extra tables. In
+  exchange, the full known and unknown ID lists are serialized into the Spring Batch metadata tables. That is
+  fine for thousands of IDs but not for millions.
+* **Parallel split after conciliation.** Publishing and opening only read the conciliation results, so they run
+  side by side. A run takes conciliation plus the slower of the two steps, instead of the sum of both.
+* **Bounded thread pools with `CompletableFuture`.** Fixed pools of 50 (openings) and 20 (publishes) cap the load
+  on `engagement-mgmt-system` and Kafka. The pools are singleton beans, so concurrent job runs share the limit
+  instead of multiplying it.
+* **All-or-nothing tasklets.** Each tasklet processes its whole list in one step execution and one transaction.
+  If one item fails, the step fails and a rerun repeats every item. Chunk-oriented steps would allow restarting
+  from where a run stopped, at the cost of more code.
+* **A new job instance per event.** A random `runId` parameter makes each event start a fresh job, so a
+  duplicate `CurrentVersionChanged` event triggers a full re-run. Using `templateId` and `version` as job
+  parameters would let Spring Batch reject duplicates.
+
+## Tech stack
+
+* Java 21, Gradle (wrapper included)
+* Spring Boot 4, Spring Batch 6, Spring Kafka
+* Postgres 16 (engagement IDs and Spring Batch metadata), Flyway
+* Kafka 7.5 (Confluent images) with ZooKeeper

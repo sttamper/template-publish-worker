@@ -14,11 +14,13 @@ spring:
       enabled: false
     jdbc:
       initialize-schema: always
-      # default SERIALIZABLE makes Postgres abort one of two step executions created in parallel
       isolation-level-for-create: read_committed
   kafka:
     bootstrap-servers: localhost:9093
+    listener:
+      ack-mode: manual_immediate
     consumer:
+      enable-auto-commit: false
       group-id: template-publish-worker
       auto-offset-reset: earliest
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
