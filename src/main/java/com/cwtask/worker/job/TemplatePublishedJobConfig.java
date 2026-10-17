@@ -19,11 +19,11 @@ public class TemplatePublishedJobConfig {
     public Job templatePublishedJob(JobRepository jobRepository,
                                     @Qualifier("conciliateEngagementIdsStepBean")
                                     Step conciliateEngagementIdsStep,
-                                    @Qualifier("helloWorldStepBean")
-                                    Step helloWorldStep) {
+                                    @Qualifier("publishTemplateUpdateAvailableStepBean")
+                                    Step publishTemplateUpdateAvailableStep) {
         return new JobBuilder(JOB_NAME, jobRepository)
                 .start(conciliateEngagementIdsStep)
-                .next(helloWorldStep)
+                .next(publishTemplateUpdateAvailableStep)
                 .build();
     }
 }

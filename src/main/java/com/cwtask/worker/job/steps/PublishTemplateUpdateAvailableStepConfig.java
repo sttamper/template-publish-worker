@@ -9,23 +9,23 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
-public class HelloWorldStepConfig {
+public class PublishTemplateUpdateAvailableStepConfig {
 
-    private static final String STEP_NAME = "helloWorldStep";
+    private static final String STEP_NAME = "publishTemplateUpdateAvailableStep";
 
     @Bean
-    public Step helloWorldStepBean(JobRepository jobRepository,
+    public Step publishTemplateUpdateAvailableStepBean(JobRepository jobRepository,
                                    PlatformTransactionManager transactionManager,
-                                   HelloWorldTasklet helloWorldTasklet) {
+                                   PublishTemplateUpdateAvailableTasklet publishTemplateUpdateAvailableTasklet) {
         return new StepBuilder(STEP_NAME, jobRepository)
-                .tasklet(helloWorldTasklet, transactionManager)
+                .tasklet(publishTemplateUpdateAvailableTasklet, transactionManager)
                 .build();
     }
 
     @Bean
     @StepScope
-    public HelloWorldTasklet helloWorldTaskletBean() {
-        return new HelloWorldTasklet();
+    public PublishTemplateUpdateAvailableTasklet publishTemplateUpdateAvailableTaskletBean() {
+        return new PublishTemplateUpdateAvailableTasklet();
     }
 
 }
