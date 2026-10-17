@@ -10,6 +10,8 @@ spring:
     schemas: engagement-sch
     default-schema: engagement-sch
   batch:
+    job:
+      enabled: false
     jdbc:
       initialize-schema: always
   kafka:
