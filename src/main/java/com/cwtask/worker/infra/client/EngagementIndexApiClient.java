@@ -3,7 +3,7 @@ package com.cwtask.worker.infra.client;
 import java.util.List;
 import java.util.Set;
 
-public interface EngagementIndexClient {
+public interface EngagementIndexApiClient {
 
     int MAX_IDS_PER_REQUEST = 50;
 

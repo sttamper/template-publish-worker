@@ -1,40 +1,29 @@
 package com.cwtask.worker.job;
 
 import org.springframework.batch.core.job.Job;
-import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.job.flow.Flow;
-import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 @Configuration
 public class TemplatePublishedJobConfig {
 
+    public static final String KNOWN_ENGAGEMENT_IDS = "knownEngagementIds";
+    public static final String UNKNOWN_ENGAGEMENT_IDS = "unknownEngagementIds";
     public static final String JOB_NAME = "templatePublishedJob";
 
     @Bean
     public Job templatePublishedJob(JobRepository jobRepository,
-                                    Step conciliateEngagementsStep,
-                                    Step helloWorldStepOne,
-                                    Step helloWorldStepTwo) {
-        Flow parallelSteps = new FlowBuilder<SimpleFlow>("parallelSteps")
-                .split(new SimpleAsyncTaskExecutor("parallel-step-"))
-                .add(flowOf(helloWorldStepOne), flowOf(helloWorldStepTwo))
-                .build();
-
+                                    @Qualifier("conciliateEngagementIdsStepBean")
+                                    Step conciliateEngagementIdsStep,
+                                    @Qualifier("helloWorldStepBean")
+                                    Step helloWorldStep) {
         return new JobBuilder(JOB_NAME, jobRepository)
-                .flow(conciliateEngagementsStep)
-                .next(parallelSteps)
-                .end()
+                .start(conciliateEngagementIdsStep)
+                .next(helloWorldStep)
                 .build();
     }
-
-    private static Flow flowOf(Step step) {
-        return new FlowBuilder<SimpleFlow>(step.getName() + "Flow").start(step).build();
-    }
-
 }

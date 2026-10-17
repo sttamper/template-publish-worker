@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  * Stands in for engagement-index-api: no HTTP call, just latency and a deterministic "known" rule.
  */
 @Component
-public class SimulatedEngagementIndexClient implements EngagementIndexClient {
+public class SimulatedEngagementIndexClient implements EngagementIndexApiClient {
 
     private static final long SIMULATED_LATENCY_MS = 300;
 
