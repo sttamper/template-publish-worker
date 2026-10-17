@@ -1,11 +1,12 @@
 services:
-  zco_engagement_db_pg16_svc:
+  # Sandbox Postgres: one schema per simulated database (e.g. "engagement-mgmt-sch" for engagement-mgmt-db)
+  cwtask_sandbox_pg_svc:
     image: postgres:16
-    container_name: engagement-db-pg16
+    container_name: cwtask-sandbox-pg-16
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
-      POSTGRES_DB: engagement-db
+      POSTGRES_DB: cwtask-sandbox-db
     ports:
       - "5432:5432"
     networks:

@@ -2,18 +2,20 @@ spring:
   application:
     name: template-publish-worker
   datasource:
-    url: jdbc:postgresql://localhost:5432/engagement-db
+    url: jdbc:postgresql://localhost:5432/cwtask-sandbox-db
     username: admin
     password: admin
   flyway:
     enabled: true
-    schemas: engagement-sch
-    default-schema: engagement-sch
+    schemas: engagement-mgmt-sch
+    default-schema: engagement-mgmt-sch
   batch:
     job:
       enabled: false
     jdbc:
       initialize-schema: always
+      # default SERIALIZABLE makes Postgres abort one of two step executions created in parallel
+      isolation-level-for-create: read_committed
   kafka:
     bootstrap-servers: localhost:9093
     consumer:
